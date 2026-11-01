@@ -26,7 +26,7 @@ jobs:
       - name: Build FM variant
         run: |
           make clean
-          make ENABLE_FMRADIO=1 VERSION_STRING=v1.5.1-FM
+          make ENABLE_FMRADIO=1 VERSION_STRING=v1.5FM
 
       - name: Verify size and files
         run: |
