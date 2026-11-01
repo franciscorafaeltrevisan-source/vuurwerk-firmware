@@ -1,0 +1,55 @@
+name: Build PY2ALC APRS base
+
+on:
+  push:
+    branches: [fm-broadcast]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout control repo
+        uses: actions/checkout@v4
+
+      - name: Checkout APRS firmware source
+        uses: actions/checkout@v4
+        with:
+          repository: bcanata/uv-k5-firmware-ta1js
+          ref: 6320cdac7a2dce46f88027d220ff67e47eb0e3fb
+          path: aprs-src
+
+      - name: Install ARM toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi make python3 python3-crcmod
+
+      - name: Build APRS base
+        working-directory: aprs-src
+        run: |
+          make clean
+          make
+
+      - name: Verify firmware size and outputs
+        working-directory: aprs-src
+        run: |
+          arm-none-eabi-size f4hwn | tee SIZE.txt
+          test -f f4hwn.bin
+          wc -c f4hwn.bin | tee -a SIZE.txt
+          if [ -f f4hwn.packed.bin ]; then wc -c f4hwn.packed.bin | tee -a SIZE.txt; fi
+          sha256sum f4hwn.bin > SHA256SUMS.txt
+          if [ -f f4hwn.packed.bin ]; then sha256sum f4hwn.packed.bin >> SHA256SUMS.txt; fi
+
+      - name: Upload APRS firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: PY2ALC-APRS-base
+          path: |
+            aprs-src/f4hwn.bin
+            aprs-src/f4hwn.packed.bin
+            aprs-src/SIZE.txt
+            aprs-src/SHA256SUMS.txt
+          if-no-files-found: error
