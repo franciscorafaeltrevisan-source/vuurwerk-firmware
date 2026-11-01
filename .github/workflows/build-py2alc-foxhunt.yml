@@ -1,0 +1,48 @@
+name: Build PY2ALC Fox Hunt + FM Broadcast
+
+on:
+  push:
+    branches:
+      - py2alc-foxhunt
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ARM toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi make python3 python3-crcmod
+      - name: Build PY2ALC Fox Hunt
+        run: |
+          make clean
+          make \
+            ENABLE_FMRADIO=1 \
+            ENABLE_SPECTRUM=1 \
+            ENABLE_AM_FIX=1 \
+            ENABLE_RSSI_BAR=1 \
+            ENABLE_TX_WHEN_AM=1 \
+            VERSION_STRING=v1.5FX
+      - name: Verify image
+        run: |
+          arm-none-eabi-size vuurwerk-v1.5.1 | tee SIZE.txt
+          wc -c vuurwerk-v1.5.1.bin vuurwerk-v1.5.1.packed.bin | tee -a SIZE.txt
+          test $(wc -c < vuurwerk-v1.5.1.bin) -le 61440
+          sha256sum vuurwerk-v1.5.1.bin vuurwerk-v1.5.1.packed.bin | tee SHA256SUMS.txt
+      - name: Stage files
+        run: |
+          cp vuurwerk-v1.5.1.bin PY2ALC_VUURWERK_FOXHUNT_FM.bin
+          cp vuurwerk-v1.5.1.packed.bin PY2ALC_VUURWERK_FOXHUNT_FM.packed.bin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PY2ALC_VUURWERK_FOXHUNT_FM
+          path: |
+            PY2ALC_VUURWERK_FOXHUNT_FM.bin
+            PY2ALC_VUURWERK_FOXHUNT_FM.packed.bin
+            SIZE.txt
+            SHA256SUMS.txt
