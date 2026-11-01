@@ -1,0 +1,77 @@
+name: Build PY2ALC APRS + AirCopy
+
+on:
+  push:
+    branches:
+      - fm-broadcast
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout control repo
+        uses: actions/checkout@v4
+
+      - name: Checkout APRS firmware source
+        uses: actions/checkout@v4
+        with:
+          repository: bcanata/uv-k5-firmware-ta1js
+          ref: 6320cdac7a2dce46f88027d220ff67e47eb0e3fb
+          path: aprs-src
+
+      - name: Install ARM toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi make python3 python3-crcmod
+
+      - name: Build PY2ALC APRS priority image
+        working-directory: aprs-src
+        run: |
+          make clean
+          make \
+            ENABLE_AMATEUR_BAND_ONLY=0 \
+            ENABLE_TX_WHEN_AM=1 \
+            ENABLE_AIRCOPY=1 \
+            ENABLE_FMRADIO=0 \
+            ENABLE_RSSI_BAR=0 \
+            ENABLE_SCAN_RANGES=0 \
+            ENABLE_COPY_CHAN_TO_VFO=0 \
+            ENABLE_SQUELCH_MORE_SENSITIVE=0 \
+            ENABLE_FEAT_F4HWN_NARROWER=0 \
+            ENABLE_FEAT_F4HWN_CTR=0 \
+            ENABLE_FEAT_F4HWN_CA=0 \
+            ENABLE_FEAT_F4HWN_INV=0 \
+            ENABLE_FLASHLIGHT=0 \
+            ENABLE_UART_RC=0 \
+            ENABLE_AM_FIX=0 \
+            EDITION_STRING=APRS \
+            VERSION_STRING_2=v1.3A
+
+      - name: Verify image
+        working-directory: aprs-src
+        run: |
+          test -f f4hwn.bin
+          test -f f4hwn.packed.bin
+          arm-none-eabi-size f4hwn | tee SIZE.txt
+          wc -c f4hwn.bin f4hwn.packed.bin | tee -a SIZE.txt
+          sha256sum f4hwn.bin f4hwn.packed.bin | tee SHA256SUMS.txt
+
+      - name: Stage named firmware files
+        working-directory: aprs-src
+        run: |
+          cp f4hwn.bin PY2ALC_APRS_AIRCOPY.bin
+          cp f4hwn.packed.bin PY2ALC_APRS_AIRCOPY.packed.bin
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: PY2ALC_APRS_AIRCOPY
+          path: |
+            aprs-src/PY2ALC_APRS_AIRCOPY.bin
+            aprs-src/PY2ALC_APRS_AIRCOPY.packed.bin
+            aprs-src/SIZE.txt
+            aprs-src/SHA256SUMS.txt
