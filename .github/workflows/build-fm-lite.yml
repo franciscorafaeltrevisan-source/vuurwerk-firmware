@@ -1,0 +1,54 @@
+name: Build VUURWERK FM Lite
+
+on:
+  push:
+    branches:
+      - fm-broadcast
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ARM toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi make python3 python3-crcmod
+
+      - name: Stub Bandscope
+        run: |
+          cat > bandscope.c <<'EOF'
+          #include "bandscope.h"
+          void BANDSCOPE_SetEnabled(bool enabled) {(void)enabled;}
+          bool BANDSCOPE_IsEnabled(void) { return false; }
+          void BANDSCOPE_Process(void) {}
+          void BANDSCOPE_Render(uint8_t *framebuffer_line) {(void)framebuffer_line;}
+          EOF
+
+      - name: Build FM without Spectrum/Patrol and without Bandscope implementation
+        run: |
+          make clean
+          make ENABLE_FMRADIO=1 ENABLE_SPECTRUM=0 VERSION_STRING=v1.5FM
+
+      - name: Verify size and files
+        run: |
+          arm-none-eabi-size vuurwerk-v1.5.1
+          test -f vuurwerk-v1.5.1.bin
+          test -f vuurwerk-v1.5.1.packed.bin
+          wc -c vuurwerk-v1.5.1.bin vuurwerk-v1.5.1.packed.bin
+          sha256sum vuurwerk-v1.5.1.bin vuurwerk-v1.5.1.packed.bin | tee SHA256SUMS.txt
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vuurwerk-v1.5.1-FM-lite
+          path: |
+            vuurwerk-v1.5.1.bin
+            vuurwerk-v1.5.1.packed.bin
+            SHA256SUMS.txt
