@@ -38,7 +38,6 @@ jobs:
             ENABLE_AIRCOPY=1 \
             ENABLE_FMRADIO=0 \
             ENABLE_RSSI_BAR=0 \
-            ENABLE_SCAN_RANGES=0 \
             ENABLE_COPY_CHAN_TO_VFO=0 \
             ENABLE_SQUELCH_MORE_SENSITIVE=0 \
             ENABLE_FEAT_F4HWN_NARROWER=0 \
