@@ -1,0 +1,66 @@
+name: Measure APRS extras
+
+on:
+  push:
+    branches:
+      - fm-broadcast
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: baseline
+            amfix: 0
+            rssi: 0
+          - name: rssi
+            amfix: 0
+            rssi: 1
+          - name: amfix
+            amfix: 1
+            rssi: 0
+          - name: both
+            amfix: 1
+            rssi: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: bcanata/uv-k5-firmware-ta1js
+          ref: 6320cdac7a2dce46f88027d220ff67e47eb0e3fb
+      - name: Install ARM toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi make python3 python3-crcmod
+      - name: Build ${{ matrix.name }}
+        shell: bash
+        run: |
+          set +e
+          make clean
+          make \
+            ENABLE_AMATEUR_BAND_ONLY=0 \
+            ENABLE_TX_WHEN_AM=1 \
+            ENABLE_AIRCOPY=1 \
+            ENABLE_FMRADIO=0 \
+            ENABLE_RSSI_BAR=${{ matrix.rssi }} \
+            ENABLE_COPY_CHAN_TO_VFO=0 \
+            ENABLE_SQUELCH_MORE_SENSITIVE=0 \
+            ENABLE_FEAT_F4HWN_NARROWER=0 \
+            ENABLE_FEAT_F4HWN_CTR=0 \
+            ENABLE_FEAT_F4HWN_CA=0 \
+            ENABLE_FEAT_F4HWN_INV=0 \
+            ENABLE_FLASHLIGHT=0 \
+            ENABLE_UART_RC=0 \
+            ENABLE_AM_FIX=${{ matrix.amfix }} \
+            EDITION_STRING=APRS \
+            VERSION_STRING_2=v1.3A 2>&1 | tee build.log
+          code=${PIPESTATUS[0]}
+          echo "RESULT=${{ matrix.name }} exit=$code"
+          if [ -f f4hwn ]; then arm-none-eabi-size f4hwn; fi
+          grep -E "overflowed by|region .* overflowed|text.*data.*bss" build.log || true
+          exit 0
