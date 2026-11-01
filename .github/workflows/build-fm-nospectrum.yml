@@ -1,0 +1,35 @@
+name: Build FM without Spectrum
+
+on:
+  push:
+    branches:
+      - fm-broadcast
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi make python3 python3-crcmod
+      - name: Build
+        run: |
+          make clean
+          make ENABLE_FMRADIO=1 ENABLE_SPECTRUM=0 VERSION_STRING=v1.5FM
+      - name: Verify
+        run: |
+          arm-none-eabi-size vuurwerk-v1.5.1
+          wc -c vuurwerk-v1.5.1.bin vuurwerk-v1.5.1.packed.bin
+          sha256sum vuurwerk-v1.5.1.bin vuurwerk-v1.5.1.packed.bin | tee SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vuurwerk-v1.5.1-FM-no-spectrum
+          path: |
+            vuurwerk-v1.5.1.bin
+            vuurwerk-v1.5.1.packed.bin
+            SHA256SUMS.txt
