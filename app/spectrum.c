@@ -141,7 +141,7 @@ static bool EnterFrequency(uint32_t *freq)
             continue;
         }
 
-        if (key >= KEY_0 && key <= KEY_9) {
+        if (key <= KEY_9) {
             if (count < 8)
                 digits[count++] = (char)('0' + (key - KEY_0));
             invalid = false;
