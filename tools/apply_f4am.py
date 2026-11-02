@@ -68,4 +68,22 @@ new_after_af = '''\tBK4819_SetAF(mod);
 assert old_after_af in s
 s = s.replace(old_after_af, new_after_af, 1)
 
+old_post = '''\tBK4819_SetRegValue(afcDisableRegSpec, modulation != MODULATION_FM);
+
+\tRADIO_SetupAGC(modulation == MODULATION_AM, false);
+'''
+new_post = '''\tBK4819_SetRegValue(afcDisableRegSpec, modulation != MODULATION_FM);
+
+\t// PY2ALC F4AM: +6 dB after demodulation in airband AM only.
+\tuint16_t reg43 = BK4819_ReadRegister(BK4819_REG_43);
+\tif (f4am)
+\t\tBK4819_WriteRegister(BK4819_REG_43, reg43 | F4AM_POST_DEMOD_GAIN_BIT);
+\telse
+\t\tBK4819_WriteRegister(BK4819_REG_43, reg43 & (uint16_t)~F4AM_POST_DEMOD_GAIN_BIT);
+
+\tRADIO_SetupAGC(modulation == MODULATION_AM, false);
+'''
+assert old_post in s
+s = s.replace(old_post, new_post, 1)
+
 p.write_text(s)
