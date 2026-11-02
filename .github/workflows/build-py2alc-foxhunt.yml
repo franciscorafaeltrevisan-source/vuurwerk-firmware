@@ -28,7 +28,10 @@ jobs:
       - name: Restore F+0 Broadcast FM shortcut
         run: |
           python3 -c "from pathlib import Path; p=Path('app/main.c'); s=p.read_text(); old='\\t\\tcase 0: { // F+0 = FM -- cycle modulation (matches \\\"0 FM\\\")\\n\\t\\t\\tgTxVfo->Modulation = (gTxVfo->Modulation + 1) % 3;\\n\\t\\t\\tgRequestSaveChannel = 1;\\n\\t\\t\\tTOAST_Show(gTxVfo->Modulation == 0 ? \\\"MOD: FM\\\" :\\n\\t\\t\\t           gTxVfo->Modulation == 1 ? \\\"MOD: AM\\\" : \\\"MOD: USB\\\");\\n\\t\\t\\tbreak;\\n\\t\\t}\\n'; new='\\t\\tcase 0: { // F+0 = FM Broadcast\\n#ifdef ENABLE_FMRADIO\\n\\t\\t\\tACTION_FM();\\n#else\\n\\t\\t\\tgBeepToPlay = BEEP_500HZ_60MS_DOUBLE_BEEP_OPTIONAL;\\n#endif\\n\\t\\t\\tbreak;\\n\\t\\t}\\n'; assert old in s; p.write_text(s.replace(old,new,1))"
-      - name: Build PY2ALC Fox Hunt
+      - name: Apply AIR SOFT RX audio profile
+        run: |
+          python3 -c "from pathlib import Path; p=Path('radio.c'); s=p.read_text(); inc='#include \\\"am_fix.h\\\"\\n'; assert inc in s; s=s.replace(inc, inc+'#include \\\"air_soft.h\\\"\\n', 1); old='\\tBK4819_SetAF(mod);\\n\\n\\tBK4819_SetRegValue(afDacGainRegSpec, 0xF);'; new='\\tBK4819_SetAF(mod);\\n\\n\\t// PY2ALC AIR SOFT: soften aviation AM only; always restore normal audio elsewhere.\\n\\tconst uint32_t rx_frequency = gRxVfo->pRX->Frequency;\\n\\tBK4819_WriteRegister(BK4819_REG_2B,\\n\\t\\tAIRSOFT_ShouldApply((uint8_t)modulation, rx_frequency, (uint8_t)MODULATION_AM) ? 0x0400 : 0x0000);\\n\\n\\tBK4819_SetRegValue(afDacGainRegSpec, 0xF);'; assert old in s; p.write_text(s.replace(old,new,1))"
+      - name: Build PY2ALC Fox Hunt AIR SOFT
         run: |
           make clean
           make \
@@ -37,7 +40,7 @@ jobs:
             ENABLE_AM_FIX=1 \
             ENABLE_RSSI_BAR=1 \
             ENABLE_TX_WHEN_AM=1 \
-            VERSION_STRING=v1.5FX
+            VERSION_STRING=v1.5FS
       - name: Verify image
         run: |
           arm-none-eabi-size vuurwerk-v1.5.1 | tee SIZE.txt
