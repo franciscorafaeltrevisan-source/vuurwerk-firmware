@@ -20,11 +20,6 @@ jobs:
           gcc -std=c11 -Wall -Wextra -Werror tests/test_f4am.c -o /tmp/test_f4am
           /tmp/test_f4am
 
-      - name: Test AIR SOFT boundaries and profile
-        run: |
-          gcc -std=c11 -Wall -Wextra -Werror tests/test_air_soft.c -o /tmp/test_air_soft
-          /tmp/test_air_soft
-
       - name: Install ARM toolchain
         run: |
           sudo apt-get update
@@ -45,10 +40,10 @@ jobs:
           p.write_text(s.replace(old, new, 1))
           PY
 
-      - name: Apply AIR SOFT 2 AM IF and audio profile
-        run: python3 tools/apply_airsoft2.py
+      - name: Apply F4HWN aviation AM demodulator
+        run: python3 tools/apply_f4am.py
 
-      - name: Build PY2ALC Fox Hunt AIR SOFT 2
+      - name: Build PY2ALC Fox Hunt F4AM
         run: |
           make clean
           make \
@@ -57,7 +52,7 @@ jobs:
             ENABLE_AM_FIX=1 \
             ENABLE_RSSI_BAR=1 \
             ENABLE_TX_WHEN_AM=1 \
-            VERSION_STRING=v1.5F2
+            VERSION_STRING=v1.5F4
 
       - name: Verify image
         run: |
@@ -68,14 +63,14 @@ jobs:
 
       - name: Stage files
         run: |
-          cp vuurwerk-v1.5.1.bin PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT2.bin
-          cp vuurwerk-v1.5.1.packed.bin PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT2.packed.bin
+          cp vuurwerk-v1.5.1.bin PY2ALC_VUURWERK_FOXHUNT_FM_F4AM.bin
+          cp vuurwerk-v1.5.1.packed.bin PY2ALC_VUURWERK_FOXHUNT_FM_F4AM.packed.bin
 
       - uses: actions/upload-artifact@v4
         with:
-          name: PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT2
+          name: PY2ALC_VUURWERK_FOXHUNT_FM_F4AM
           path: |
-            PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT2.bin
-            PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT2.packed.bin
+            PY2ALC_VUURWERK_FOXHUNT_FM_F4AM.bin
+            PY2ALC_VUURWERK_FOXHUNT_FM_F4AM.packed.bin
             SIZE.txt
             SHA256SUMS.txt
