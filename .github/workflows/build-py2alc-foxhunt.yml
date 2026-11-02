@@ -15,6 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Test F4HWN AM demodulator profile
+        run: |
+          gcc -std=c11 -Wall -Wextra -Werror tests/test_f4am.c -o /tmp/test_f4am
+          /tmp/test_f4am
+
       - name: Test AIR SOFT boundaries and profile
         run: |
           gcc -std=c11 -Wall -Wextra -Werror tests/test_air_soft.c -o /tmp/test_air_soft
