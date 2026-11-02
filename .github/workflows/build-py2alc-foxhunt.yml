@@ -40,10 +40,10 @@ jobs:
           p.write_text(s.replace(old, new, 1))
           PY
 
-      - name: Apply F4HWN aviation AM demodulator + volume boost
+      - name: Apply F4HWN aviation AM demodulator + post-demod gain
         run: python3 tools/apply_f4am.py
 
-      - name: Build PY2ALC Fox Hunt F4AM VOL
+      - name: Build PY2ALC Fox Hunt F4AM +6dB
         run: |
           make clean
           make \
@@ -52,7 +52,7 @@ jobs:
             ENABLE_AM_FIX=1 \
             ENABLE_RSSI_BAR=1 \
             ENABLE_TX_WHEN_AM=1 \
-            VERSION_STRING=v1.5FV
+            VERSION_STRING=v1.5G6
 
       - name: Verify image
         run: |
@@ -63,14 +63,14 @@ jobs:
 
       - name: Stage files
         run: |
-          cp vuurwerk-v1.5.1.bin PY2ALC_VUURWERK_FOXHUNT_FM_F4AM_VOL.bin
-          cp vuurwerk-v1.5.1.packed.bin PY2ALC_VUURWERK_FOXHUNT_FM_F4AM_VOL.packed.bin
+          cp vuurwerk-v1.5.1.bin PY2ALC_VUURWERK_FOXHUNT_FM_F4AM_VOL6DB.bin
+          cp vuurwerk-v1.5.1.packed.bin PY2ALC_VUURWERK_FOXHUNT_FM_F4AM_VOL6DB.packed.bin
 
       - uses: actions/upload-artifact@v4
         with:
-          name: PY2ALC_VUURWERK_FOXHUNT_FM_F4AM_VOL
+          name: PY2ALC_VUURWERK_FOXHUNT_FM_F4AM_VOL6DB
           path: |
-            PY2ALC_VUURWERK_FOXHUNT_FM_F4AM_VOL.bin
-            PY2ALC_VUURWERK_FOXHUNT_FM_F4AM_VOL.packed.bin
+            PY2ALC_VUURWERK_FOXHUNT_FM_F4AM_VOL6DB.bin
+            PY2ALC_VUURWERK_FOXHUNT_FM_F4AM_VOL6DB.packed.bin
             SIZE.txt
             SHA256SUMS.txt
