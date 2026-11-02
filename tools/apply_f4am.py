@@ -57,6 +57,12 @@ new_after_af = '''\tBK4819_SetAF(mod);
 \t\tBK4819_WriteRegister(0x2F, F4AM_REG_2F_NORMAL);
 \t}
 
+\t// PY2ALC F4AM VOL: +2 dB only after AM demodulation; preserve all other REG48 fields.
+\tuint16_t reg48 = BK4819_ReadRegister(BK4819_REG_48);
+\tconst uint16_t gain2 = f4am ? F4AM_RX_GAIN2_AM : F4AM_RX_GAIN2_NORMAL;
+\tBK4819_WriteRegister(BK4819_REG_48,
+\t\t(reg48 & (uint16_t)~0x03F0u) | ((gain2 & 0x3Fu) << 4));
+
 \tBK4819_SetRegValue(afDacGainRegSpec, 0xF);
 '''
 assert old_after_af in s
