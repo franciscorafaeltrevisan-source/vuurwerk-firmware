@@ -28,10 +28,11 @@ int main(void)
     assert(F4AM_REG_2B_NORMAL == 0x0000u);
     assert(F4AM_REG_2F_NORMAL == 0x9890u);
 
-    /* F4AM VOL: only raise the post-demodulation RX audio gain.
-       Stock VUURWERK uses 58; 62 adds about +2 dB without changing AM demodulation. */
     assert(F4AM_RX_GAIN2_AM == 62u);
     assert(F4AM_RX_GAIN2_NORMAL == 58u);
+
+    /* BK4819 REG43 bit 2 adds +6 dB after demodulation. */
+    assert(F4AM_POST_DEMOD_GAIN_BIT == (1u << 2));
 
     return 0;
 }
