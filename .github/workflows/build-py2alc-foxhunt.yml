@@ -14,6 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Test AIR SOFT boundaries
+        run: |
+          gcc -std=c11 -Wall -Wextra -Werror tests/test_air_soft.c -o /tmp/test_air_soft
+          /tmp/test_air_soft
       - name: Install ARM toolchain
         run: |
           sudo apt-get update
@@ -42,13 +46,13 @@ jobs:
           sha256sum vuurwerk-v1.5.1.bin vuurwerk-v1.5.1.packed.bin | tee SHA256SUMS.txt
       - name: Stage files
         run: |
-          cp vuurwerk-v1.5.1.bin PY2ALC_VUURWERK_FOXHUNT_FM.bin
-          cp vuurwerk-v1.5.1.packed.bin PY2ALC_VUURWERK_FOXHUNT_FM.packed.bin
+          cp vuurwerk-v1.5.1.bin PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT.bin
+          cp vuurwerk-v1.5.1.packed.bin PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT.packed.bin
       - uses: actions/upload-artifact@v4
         with:
-          name: PY2ALC_VUURWERK_FOXHUNT_FM
+          name: PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT
           path: |
-            PY2ALC_VUURWERK_FOXHUNT_FM.bin
-            PY2ALC_VUURWERK_FOXHUNT_FM.packed.bin
+            PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT.bin
+            PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT.packed.bin
             SIZE.txt
             SHA256SUMS.txt
