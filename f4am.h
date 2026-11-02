@@ -20,6 +20,11 @@
 #define F4AM_REG_2B_NORMAL 0x0000u
 #define F4AM_REG_2F_NORMAL 0x9890u
 
+/* REG48 AF Rx Gain-2: 0.5 dB/step. Keep stock 58 normally;
+ * use 62 (+2 dB) only on F4AM aviation reception. */
+#define F4AM_RX_GAIN2_AM     62u
+#define F4AM_RX_GAIN2_NORMAL 58u
+
 static inline bool F4AM_ShouldApply(uint8_t modulation, uint32_t frequency_10hz, uint8_t am_mode)
 {
     return modulation == am_mode &&
