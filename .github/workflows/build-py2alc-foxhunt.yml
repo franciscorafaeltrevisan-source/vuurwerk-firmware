@@ -14,10 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Test AIR SOFT boundaries
+
+      - name: Test AIR SOFT boundaries and profile
         run: |
           gcc -std=c11 -Wall -Wextra -Werror tests/test_air_soft.c -o /tmp/test_air_soft
           /tmp/test_air_soft
+
       - name: Install ARM toolchain
         run: |
           sudo apt-get update
@@ -25,13 +27,55 @@ jobs:
             gcc-arm-none-eabi binutils-arm-none-eabi \
             libnewlib-dev libnewlib-arm-none-eabi \
             make python3-crcmod
+
       - name: Restore F+0 Broadcast FM shortcut
         run: |
-          python3 -c "from pathlib import Path; p=Path('app/main.c'); s=p.read_text(); old='\\t\\tcase 0: { // F+0 = FM -- cycle modulation (matches \\\"0 FM\\\")\\n\\t\\t\\tgTxVfo->Modulation = (gTxVfo->Modulation + 1) % 3;\\n\\t\\t\\tgRequestSaveChannel = 1;\\n\\t\\t\\tTOAST_Show(gTxVfo->Modulation == 0 ? \\\"MOD: FM\\\" :\\n\\t\\t\\t           gTxVfo->Modulation == 1 ? \\\"MOD: AM\\\" : \\\"MOD: USB\\\");\\n\\t\\t\\tbreak;\\n\\t\\t}\\n'; new='\\t\\tcase 0: { // F+0 = FM Broadcast\\n#ifdef ENABLE_FMRADIO\\n\\t\\t\\tACTION_FM();\\n#else\\n\\t\\t\\tgBeepToPlay = BEEP_500HZ_60MS_DOUBLE_BEEP_OPTIONAL;\\n#endif\\n\\t\\t\\tbreak;\\n\\t\\t}\\n'; assert old in s; p.write_text(s.replace(old,new,1))"
-      - name: Apply AIR SOFT RX audio profile
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/main.c')
+          s = p.read_text()
+          old = '\t\tcase 0: { // F+0 = FM -- cycle modulation (matches "0 FM")\n\t\t\tgTxVfo->Modulation = (gTxVfo->Modulation + 1) % 3;\n\t\t\tgRequestSaveChannel = 1;\n\t\t\tTOAST_Show(gTxVfo->Modulation == 0 ? "MOD: FM" :\n\t\t\t           gTxVfo->Modulation == 1 ? "MOD: AM" : "MOD: USB");\n\t\t\tbreak;\n\t\t}\n'
+          new = '\t\tcase 0: { // F+0 = FM Broadcast\n#ifdef ENABLE_FMRADIO\n\t\t\tACTION_FM();\n#else\n\t\t\tgBeepToPlay = BEEP_500HZ_60MS_DOUBLE_BEEP_OPTIONAL;\n#endif\n\t\t\tbreak;\n\t\t}\n'
+          assert old in s
+          p.write_text(s.replace(old, new, 1))
+          PY
+
+      - name: Apply AIR SOFT 2 AM IF and audio profile
         run: |
-          python3 -c "from pathlib import Path; p=Path('radio.c'); s=p.read_text(); inc='#include \\\"am_fix.h\\\"\\n'; assert inc in s; s=s.replace(inc, inc+'#include \\\"air_soft.h\\\"\\n', 1); old='\\tBK4819_SetAF(mod);\\n\\n\\tBK4819_SetRegValue(afDacGainRegSpec, 0xF);'; new='\\tBK4819_SetAF(mod);\\n\\n\\t// PY2ALC AIR SOFT: soften aviation AM only; always restore normal audio elsewhere.\\n\\tconst uint32_t rx_frequency = gRxVfo->pRX->Frequency;\\n\\tBK4819_WriteRegister(BK4819_REG_2B,\\n\\t\\tAIRSOFT_ShouldApply((uint8_t)modulation, rx_frequency, (uint8_t)MODULATION_AM) ? 0x0400 : 0x0000);\\n\\n\\tBK4819_SetRegValue(afDacGainRegSpec, 0xF);'; assert old in s; p.write_text(s.replace(old,new,1))"
-      - name: Build PY2ALC Fox Hunt AIR SOFT
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('radio.c')
+          s = p.read_text()
+          inc = '#include "am_fix.h"\n'
+          assert inc in s
+          s = s.replace(inc, inc + '#include "air_soft.h"\n', 1)
+          old = '\tBK4819_SetAF(mod);\n\n\tBK4819_SetRegValue(afDacGainRegSpec, 0xF);'
+          new = '''\tBK4819_SetAF(mod);
+
+\t// PY2ALC AIR SOFT 2: aviation AM gets a tighter IF/audio path.
+\t// All other modes restore their normal channel bandwidth/profile.
+\tconst uint32_t rx_frequency = gRxVfo->pRX->Frequency;
+\tconst bool air_soft = AIRSOFT_ShouldApply((uint8_t)modulation, rx_frequency, (uint8_t)MODULATION_AM);
+\tif (air_soft) {
+\t\tBK4819_WriteRegister(BK4819_REG_2B, AIRSOFT_REG_2B);
+\t\tBK4819_WriteRegister(0x2F, AIRSOFT_REG_2F);
+\t\tBK4819_WriteRegister(0x54, AIRSOFT_REG_54);
+\t\tBK4819_WriteRegister(0x55, AIRSOFT_REG_55);
+\t\tBK4819_WriteRegister(BK4819_REG_43, AIRSOFT_REG_43);
+\t} else {
+\t\tBK4819_WriteRegister(BK4819_REG_2B, 0x0000);
+\t\tBK4819_WriteRegister(0x2F, 0x9890);
+\t\tBK4819_WriteRegister(0x54, 0x9009);
+\t\tBK4819_WriteRegister(0x55, 0x31A9);
+\t\tBK4819_SetFilterBandwidth(gRxVfo->CHANNEL_BANDWIDTH, true);
+\t}
+
+\tBK4819_SetRegValue(afDacGainRegSpec, 0xF);'''
+          assert old in s
+          p.write_text(s.replace(old, new, 1))
+          PY
+
+      - name: Build PY2ALC Fox Hunt AIR SOFT 2
         run: |
           make clean
           make \
@@ -40,22 +84,25 @@ jobs:
             ENABLE_AM_FIX=1 \
             ENABLE_RSSI_BAR=1 \
             ENABLE_TX_WHEN_AM=1 \
-            VERSION_STRING=v1.5FS
+            VERSION_STRING=v1.5F2
+
       - name: Verify image
         run: |
           arm-none-eabi-size vuurwerk-v1.5.1 | tee SIZE.txt
           wc -c vuurwerk-v1.5.1.bin vuurwerk-v1.5.1.packed.bin | tee -a SIZE.txt
           test $(wc -c < vuurwerk-v1.5.1.bin) -le 61440
           sha256sum vuurwerk-v1.5.1.bin vuurwerk-v1.5.1.packed.bin | tee SHA256SUMS.txt
+
       - name: Stage files
         run: |
-          cp vuurwerk-v1.5.1.bin PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT.bin
-          cp vuurwerk-v1.5.1.packed.bin PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT.packed.bin
+          cp vuurwerk-v1.5.1.bin PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT2.bin
+          cp vuurwerk-v1.5.1.packed.bin PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT2.packed.bin
+
       - uses: actions/upload-artifact@v4
         with:
-          name: PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT
+          name: PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT2
           path: |
-            PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT.bin
-            PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT.packed.bin
+            PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT2.bin
+            PY2ALC_VUURWERK_FOXHUNT_FM_AIRSOFT2.packed.bin
             SIZE.txt
             SHA256SUMS.txt
